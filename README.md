@@ -7,7 +7,7 @@ An iPhone-first Game Boy-style player for **Bill & Ted's Excellent Game Boy Adve
 ## Using it
 
 - **Power**: the ◄OFF·ON► switch at the top-left. Power-on scrolls the logo stored in the loaded cartridge and plays the two-note start-up chime.
-- **Cartridge**: the slot at the top-right. The loaded cart's title shows beside it. Loading a new cart powers the unit off first.
+- **Cartridge**: the slot at the top-right (or the screen, while no cart is in). The loaded cart's title shows beside it, and it stays loaded on the phone. Loading a new cart powers the unit off first. Open the page with `#test` to load the bundled test cart.
 - **Sound**: tap the speaker grille (bottom-right) to toggle sound on and off.
 - **D-pad**: press anywhere on the left half. The direction follows your thumb, so drifting or a small reverse flick still steers. Diagonals are supported.
 - **A / B**: press anywhere on the right half. Land on the seam between them to press both.

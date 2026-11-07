@@ -1,5 +1,5 @@
 // Keeps the app playable offline: serve from the cache, refresh it from the network when online.
-const CACHE = 'excellent-gb-v0.1.0';
+const CACHE = 'excellent-gb-v0.1.1';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
   './vendor/binjgb/binjgb.js', './vendor/binjgb/binjgb.wasm', './carts/test-porklike.gb'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
