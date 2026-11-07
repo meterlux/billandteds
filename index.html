@@ -277,6 +277,7 @@ async function loadInitialCart() {
   const saved = await db.get('rom');
   if (saved) { try { await useCart(saved, false); return; } catch (e) {} }
   const r = await fetch('carts/test-porklike.gb');
+  if (!r.ok) throw new Error('no test cart');
   await useCart(await r.arrayBuffer(), false);
 }
 $('#file').addEventListener('change', async e => {
@@ -329,7 +330,8 @@ async function bootSequence(token) {
   return await sleep(1050, token);
 }
 async function powerOn() {
-  if (power || !cart) return;
+  if (power) return;
+  if (!cart) { toast('No cartridge. Tap the slot at the top-right to load a .gb file.', 3200); return; }
   ensureAudio();
   power = true; unit.classList.add('on');
   const token = booting = { live: true };
@@ -600,7 +602,7 @@ $('#cart').addEventListener('click', () => { haptic(true); $('#file').click(); }
 /* ---------- start ---------- */
 setSound(soundOn); $('#speaker').classList.remove('flash');
 layout(); sizeLcd();
-loadInitialCart().catch(() => toast('No cartridge yet: tap the slot top-right', 3000));
+loadInitialCart().catch(() => { $('#cartName').textContent = 'NO CART'; toast('Tap the cartridge slot at the top-right to load a .gb file', 3600); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
