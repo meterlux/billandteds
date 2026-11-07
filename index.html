@@ -555,7 +555,7 @@ controls.addEventListener('pointerdown', e => {
   if (!zone) return;
   if (zone === 'spk') { setSound(!soundOn); haptic(); return; }
   try { controls.setPointerCapture(e.pointerId); } catch (_) {}
-  const t = { zone, set: new Set(), ax: L.dpad.x, ay: L.dpad.y };
+  const t = { zone, set: new Set(), ax: L.dpad.x, ay: L.dpad.y, at: performance.now() };
   if (zone === 'dpad') {
     // a touch that lands well off the cross anchors at the pad's center, one on it steers from the center too
     t.set = dpadDirs(t, x, y);
@@ -573,7 +573,15 @@ controls.addEventListener('pointermove', e => {
   else if (t.zone === 'ab') t.set = abDirs(x, y);
   if ([...t.set].join() !== before) applyButtons();
 });
-const lift = e => { if (touches.delete(e.pointerId)) { haptic(true); applyButtons(); } };
+// a press is held for at least 3 frames, so even the quickest tap is seen by a game that reads the buttons once a frame
+const MIN_PRESS_MS = 50;
+const lift = e => {
+  const t = touches.get(e.pointerId); if (!t) return;
+  haptic(true);
+  const wait = MIN_PRESS_MS - (performance.now() - t.at);
+  const done = () => { if (touches.get(e.pointerId) === t) { touches.delete(e.pointerId); applyButtons(); } };
+  if (wait > 0) { t.zone = 'held'; setTimeout(done, wait); } else done();
+};
 controls.addEventListener('pointerup', lift);
 controls.addEventListener('pointercancel', lift);
 document.addEventListener('contextmenu', e => e.preventDefault());
