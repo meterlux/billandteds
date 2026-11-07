@@ -1,0 +1,6 @@
+# Never commit cartridge dumps or saves. The one test cart in carts/ is openly licensed.
+*.gb
+*.gbc
+*.sav
+!carts/test-porklike.gb
+.DS_Store

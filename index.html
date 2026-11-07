@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Excellent GB">
+<meta name="theme-color" content="#c9c6bd">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Excellent GB</title>
+<style>
+/* One portrait screen: top edge (power, cartridge) / lens with the dot-matrix LCD / controls. */
+:root{
+  --body:#cbc8c0; --body-hi:#d6d3cc; --body-lo:#b9b6ad; --groove:rgba(0,0,0,.13);
+  --lens:#57566a; --lens-hi:#62617a;
+  --maroon:#8b1f4c; --navy:#2c2f7c;
+  --ink:#2f327a;            /* the navy lettering on the body */
+  --pad:#2b2a31; --pad-hi:#3b3a44;
+  --ab:#9a1d4f; --ab-hi:#b3305f; --ab-lo:#6e1236;
+  --pill:#8c8a96; --pill-lo:#6f6d79;
+  --lcd-off:#a7b07f;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0;background:var(--body);overflow:hidden;overscroll-behavior:none}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:none}
+
+#unit{position:relative;height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0px) max(6px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(6px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,var(--body-hi),var(--body) 30%,var(--body) 80%,var(--body-lo))}
+
+/* Top edge: the grooves and the ◄OFF·ON► switch of the original, plus the cartridge slot */
+.top{flex:0 0 auto;height:38px;display:flex;align-items:center;justify-content:space-between;position:relative;padding:0 4px}
+.top::before,.top::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--groove);box-shadow:0 1px 0 rgba(255,255,255,.45)}
+.top::before{top:3px}.top::after{bottom:5px}
+#power{height:100%;display:flex;align-items:center;gap:5px;padding:0 6px;font:italic 700 10px/1 var(--sans);letter-spacing:.06em;color:var(--ink)}
+#power .sw{position:relative;width:30px;height:12px;border-radius:3px;background:var(--body-lo);box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+#power .sw::after{content:"";position:absolute;top:1px;left:2px;width:12px;height:10px;border-radius:2px;background:var(--body-hi);
+  box-shadow:0 1px 1px rgba(0,0,0,.35);transition:left .12s}
+#unit.on #power .sw::after{left:16px}
+#power .lbl{opacity:.9}
+#cart{height:100%;display:flex;align-items:center;gap:6px;padding:0 6px;font:italic 700 9px/1 var(--sans);letter-spacing:.12em;color:var(--ink)}
+#cart .slot{width:34px;height:8px;border-radius:2px;background:var(--body-lo);box-shadow:inset 0 1px 2px rgba(0,0,0,.4)}
+#cartName{max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.75}
+
+/* Lens: dark glass with the stripes and lettering across the top, big round lower-right corner */
+.lens{flex:0 0 auto;background:linear-gradient(170deg,var(--lens-hi),var(--lens) 40%);border-radius:9px 9px 38px 9px;
+  padding:7px 9px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 0 rgba(255,255,255,.5)}
+.stripes{display:flex;align-items:center;gap:6px;height:12px;margin-bottom:6px}
+.stripes .ln{height:5px;background:linear-gradient(var(--maroon) 0 2px,transparent 2px 3px,var(--navy) 3px 5px)}
+.stripes .ln.a{flex:0 0 16px}.stripes .ln.b{flex:1}
+.stripes span{font:italic 700 7.5px/1 var(--sans);letter-spacing:.05em;color:#cfcddb;white-space:nowrap}
+#led{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:#3a2226;box-shadow:inset 0 1px 1px rgba(0,0,0,.6)}
+#unit.on #led{background:#ff2a2a;box-shadow:0 0 6px #ff2a2a,inset 0 -1px 1px rgba(0,0,0,.3)}
+.lcd{position:relative;width:100%;aspect-ratio:160/144;background:var(--lcd-off);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),inset 1px 2px 5px rgba(0,0,0,.35)}
+#scr{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lcd::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.07),transparent 35%);box-shadow:inset 1px 2px 5px rgba(0,0,0,.28)}
+
+/* Controls: positions are set by layout() so the hit areas and the drawn parts always agree */
+.controls{flex:1 1 auto;min-height:0;position:relative}
+.part{position:absolute;pointer-events:none}
+#dpad{transition:transform .04s}
+#dpad svg{width:100%;height:100%;display:block;overflow:visible}
+.ab{border-radius:50%;background:radial-gradient(circle at 38% 32%,var(--ab-hi),var(--ab) 55%,var(--ab-lo));
+  box-shadow:0 3px 0 rgba(0,0,0,.18),0 5px 8px rgba(0,0,0,.22),inset 0 -2px 3px rgba(0,0,0,.25)}
+.ab.on{transform:scale(.95) translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18),0 2px 3px rgba(0,0,0,.2),inset 0 2px 4px rgba(0,0,0,.35);filter:brightness(.9)}
+.abwell{border-radius:999px;background:rgba(0,0,0,.055);box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+.pill,.abwell{transform:rotate(var(--rot,0deg))}
+.pill{border-radius:999px;background:linear-gradient(var(--pill),var(--pill-lo));box-shadow:0 2px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.25)}
+.pill.on{transform:translateY(1px) rotate(var(--rot));box-shadow:inset 0 1px 2px rgba(0,0,0,.35);filter:brightness(.88)}
+.word{font:italic 700 10px/1 var(--sans);letter-spacing:.08em;color:var(--ink);text-align:center;white-space:nowrap}
+.word.big{font-size:15px;letter-spacing:0}
+#grill{position:absolute;inset:0;transform:rotate(30deg)}
+#speaker .slot{position:absolute;border-radius:999px;background:rgba(0,0,0,.26);box-shadow:inset 0 1px 2px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.4)}
+#speaker.mute .slot{background:rgba(0,0,0,.1)}
+#speaker .x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .25s}
+#speaker .x svg{width:42%;height:42%}
+#speaker.flash .x{opacity:1}
+#toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;border-radius:6px;background:rgba(20,30,20,.82);color:#d7dfb0;
+  font:600 12px/1.3 var(--sans);letter-spacing:.04em;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80%}
+#toast.show{opacity:1}
+#file{position:fixed;left:-999px;top:0;width:1px;height:1px;opacity:0}
+</style>
+</head>
+<body>
+<div id="unit">
+  <div class="top">
+    <button id="power" aria-label="Power"><span class="lbl">&#9664;OFF&middot;ON&#9654;</span><span class="sw"></span></button>
+    <button id="cart" aria-label="Load cartridge"><span id="cartName"></span><span class="slot"></span></button>
+  </div>
+
+  <div class="lens">
+    <div class="stripes"><i id="led"></i><i class="ln a"></i><span>DOT MATRIX WITH STEREO SOUND</span><i class="ln b"></i></div>
+    <div class="lcd" id="lcd"><canvas id="scr" aria-label="Game screen"></canvas><div id="toast"></div></div>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="part" id="dpad"><svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#45444f"/><stop offset=".5" stop-color="#2d2c33"/><stop offset="1" stop-color="#1f1e24"/></linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="49" fill="rgba(0,0,0,.06)"/>
+      <path d="M36 6 Q36 3 39 3 H61 Q64 3 64 6 V36 H94 Q97 36 97 39 V61 Q97 64 94 64 H64 V94 Q64 97 61 97 H39 Q36 97 36 94 V64 H6 Q3 64 3 61 V39 Q3 36 6 36 H36 Z" fill="rgba(0,0,0,.25)" transform="translate(0 2.2)"/>
+      <path id="cross" d="M36 6 Q36 3 39 3 H61 Q64 3 64 6 V36 H94 Q97 36 97 39 V61 Q97 64 94 64 H64 V94 Q64 97 61 97 H39 Q36 97 36 94 V64 H6 Q3 64 3 61 V39 Q3 36 6 36 H36 Z" fill="url(#pg)"/>
+      <g fill="#1a191e" opacity=".9">
+        <path d="M50 10 L56 18 H44 Z"/><path d="M50 90 L56 82 H44 Z"/><path d="M10 50 L18 44 V56 Z"/><path d="M90 50 L82 44 V56 Z"/>
+      </g>
+      <circle cx="50" cy="50" r="7" fill="#232228" stroke="rgba(255,255,255,.06)" stroke-width=".8"/>
+      <g id="hl" fill="rgba(255,255,255,.08)"></g>
+    </svg></div>
+
+    <div class="part abwell" id="abwell"></div>
+    <div class="part ab" id="btnB"></div>
+    <div class="part ab" id="btnA"></div>
+    <div class="part word big" id="lblB">B</div>
+    <div class="part word big" id="lblA">A</div>
+
+    <div class="part pill" id="btnSel"></div>
+    <div class="part pill" id="btnSta"></div>
+    <div class="part word" id="lblSel">SELECT</div>
+    <div class="part word" id="lblSta">START</div>
+
+    <div class="part" id="speaker"><div id="grill"></div><div class="x"><svg viewBox="0 0 24 24" fill="none" stroke="#2f327a" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="#2f327a"/><path id="spkWave" d="M16 9c1.5 1.6 1.5 4.4 0 6M18.5 6.5c3 3 3 8 0 11"/><path id="spkX" d="M16 9l6 6M22 9l-6 6"/></svg></div></div>
+  </div>
+</div>
+<input type="file" id="file">
+<script src="vendor/binjgb/binjgb.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   Excellent GB: a Game Boy-style shell for the binjgb emulator.
+   The game is never bundled: you load your own cartridge dump.
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const unit = $('#unit');
+
+/* ---------- small storage helpers ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('egb.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('egb.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+const db = (() => {
+  let p = null;
+  const open = () => p || (p = new Promise((res, rej) => {
+    const r = indexedDB.open('excellent-gb', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const op = async (mode, fn) => {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction('kv', mode); const r = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error);
+    });
+  };
+  return {
+    get: k => op('readonly', s => s.get(k)).catch(() => undefined),
+    set: (k, v) => op('readwrite', s => s.put(v, k)).catch(() => {}),
+    del: k => op('readwrite', s => s.delete(k)).catch(() => {})
+  };
+})();
+
+/* ---------- the LCD: high-contrast DMG greens, pixel grid and a faint drop shadow ---------- */
+const GBW = 160, GBH = 144;
+const PAL = [[0xcf, 0xd8, 0xa6], [0x8b, 0x9c, 0x5f], [0x3f, 0x57, 0x37], [0x15, 0x26, 0x18]];   // lightest .. darkest
+const scr = $('#scr'), ctx = scr.getContext('2d');
+const off = document.createElement('canvas'); off.width = GBW; off.height = GBH;
+const offCtx = off.getContext('2d');
+const frame = offCtx.createImageData(GBW, GBH);
+let grid = null, shadowPx = 1;
+function sizeLcd() {
+  const r = scr.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  scr.width = Math.max(1, Math.round(r.width * dpr)); scr.height = Math.max(1, Math.round(r.height * dpr));
+  const px = scr.width / GBW;
+  shadowPx = Math.max(1, Math.round(px * 0.2));
+  // gaps between the dots, in the lightest LCD color, on the same boundaries the scaled frame uses
+  grid = document.createElement('canvas'); grid.width = scr.width; grid.height = scr.height;
+  const g = grid.getContext('2d'), gw = Math.max(1, Math.round(px * 0.11));
+  g.fillStyle = `rgba(${PAL[0].join(',')},.3)`;
+  for (let i = 1; i < GBW; i++) g.fillRect(Math.round(i * scr.width / GBW), 0, gw, scr.height);
+  for (let j = 1; j < GBH; j++) g.fillRect(0, Math.round(j * scr.height / GBH), scr.width, gw);
+  present();
+}
+let lcdOn = false;
+function present() {
+  ctx.imageSmoothingEnabled = false;
+  if (!lcdOn) { ctx.clearRect(0, 0, scr.width, scr.height); return; }
+  offCtx.putImageData(frame, 0, 0);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.drawImage(off, 0, 0, scr.width, scr.height);
+  // the real LCD casts each dot's shadow down and to the right onto the reflector
+  ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.14;
+  ctx.drawImage(off, shadowPx, shadowPx, scr.width, scr.height);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  if (grid) ctx.drawImage(grid, 0, 0);
+}
+function clearFrame(shade = 0) {
+  const c = PAL[shade], d = frame.data;
+  for (let i = 0; i < d.length; i += 4) { d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }
+}
+function dot(x, y, shade) {
+  if (x < 0 || y < 0 || x >= GBW || y >= GBH) return;
+  const c = PAL[shade], i = (y * GBW + x) * 4, d = frame.data;
+  d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+}
+let toastT = 0;
+function toast(msg, ms = 1800) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ---------- audio: one context, one master volume the speaker grille switches ---------- */
+let actx = null, master = null;
+let soundOn = store.get('sound', true);
+function ensureAudio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    // let game sound play even with the ring/silent switch on silent (iOS 17+)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    actx = new AC();
+    master = actx.createGain(); master.gain.value = soundOn ? 1 : 0; master.connect(actx.destination);
+  }
+  if (actx.state !== 'running') actx.resume().catch(() => {});
+  return actx;
+}
+function setSound(on) {
+  soundOn = on; store.set('sound', on);
+  if (master) master.gain.setTargetAtTime(on ? 1 : 0, actx.currentTime, 0.01);
+  const sp = $('#speaker'); sp.classList.toggle('mute', !on);
+  $('#spkWave').style.display = on ? '' : 'none'; $('#spkX').style.display = on ? 'none' : '';
+  sp.classList.add('flash'); clearTimeout(setSound.t); setSound.t = setTimeout(() => sp.classList.remove('flash'), 900);
+}
+
+/* The start-up chime: two square-wave notes on pulse channel 1 (about 1048 Hz then 2080 Hz),
+   volume 15 stepping down every 3/64 s, recreated here rather than taken from any boot ROM. */
+function chime() {
+  const a = ensureAudio(), t0 = a.currentTime + 0.02;
+  const note = (freq, start, dur) => {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'square'; o.frequency.value = freq;
+    const step = 3 / 64, peak = 0.16;
+    g.gain.setValueAtTime(0, 0);
+    for (let v = 15, t = start; v >= 0 && t < start + dur; v--, t += step) g.gain.setValueAtTime(peak * v / 15, t);
+    g.gain.setValueAtTime(0, start + dur);
+    o.connect(g); g.connect(master); o.start(start); o.stop(start + dur + 0.05);
+  };
+  note(131072 / (2048 - 0x783), t0, 0.09);
+  note(131072 / (2048 - 0x7c1), t0 + 0.09, 15 * 3 / 64);
+}
+
+/* ---------- cartridge ---------- */
+let cart = null;   // { rom: ArrayBuffer, title, id, logo }
+function readHeader(buf) {
+  const u = new Uint8Array(buf);
+  if (u.length < 0x150) throw new Error('That file is too small to be a Game Boy cartridge.');
+  let title = '';
+  for (let i = 0x134; i < 0x144; i++) { const c = u[i]; if (c === 0) break; if (c < 32 || c > 126) break; title += String.fromCharCode(c); }
+  title = title.trim() || 'UNTITLED';
+  const hx = n => n.toString(16).padStart(2, '0');
+  return { title, id: title + '-' + hx(u[0x14d]) + hx(u[0x14e]) + hx(u[0x14f]), logo: u.slice(0x104, 0x134) };
+}
+async function useCart(rom, persist) {
+  const h = readHeader(rom);
+  cart = Object.assign({ rom }, h);
+  $('#cartName').textContent = h.title;
+  if (persist) { await db.set('rom', rom); }
+}
+async function loadInitialCart() {
+  const saved = await db.get('rom');
+  if (saved) { try { await useCart(saved, false); return; } catch (e) {} }
+  const r = await fetch('carts/test-porklike.gb');
+  await useCart(await r.arrayBuffer(), false);
+}
+$('#file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const buf = await f.arrayBuffer();
+    if (power) await powerOff();
+    await useCart(buf, true);
+    toast('Cartridge in: ' + cart.title + '\nSlide the power on');
+  } catch (err) { toast(err.message || 'Could not read that file', 2600); }
+});
+
+/* ---------- power and the start-up sequence ---------- */
+let power = false, booting = null;
+function sleep(ms, token) { return new Promise(res => setTimeout(() => res(token.live), ms)); }
+// The scrolling logo is drawn from the 48 logo bytes in the loaded cartridge's header, the way the
+// hardware does it; each byte pair is a 4x4 block, every dot doubled to make the 96x16 logo.
+function logoDots(logo) {
+  const bm = new Uint8Array(48 * 8);
+  for (let half = 0; half < 2; half++)
+    for (let t = 0; t < 12; t++)
+      for (let r = 0; r < 4; r++) {
+        const b = logo[half * 24 + t * 2 + (r >> 1)], nib = (r & 1) ? (b & 15) : (b >> 4);
+        for (let c = 0; c < 4; c++) bm[(half * 4 + r) * 48 + t * 4 + c] = (nib >> (3 - c)) & 1;
+      }
+  return bm;
+}
+const REG = [0x3c, 0x42, 0xb9, 0xa5, 0xb9, 0xa5, 0x42, 0x3c];   // a small (R) mark beside the logo
+function drawBoot(bm, y) {
+  clearFrame(0);
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 48; c++) if (bm[r * 48 + c]) {
+    const x = 32 + c * 2, yy = y + r * 2;
+    dot(x, yy, 3); dot(x + 1, yy, 3); dot(x, yy + 1, 3); dot(x + 1, yy + 1, 3);
+  }
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if ((REG[r] >> (7 - c)) & 1) dot(128 + c, y - 0 + r, 3);
+  present();
+}
+async function bootSequence(token) {
+  const bm = logoDots(cart.logo);
+  lcdOn = true;
+  clearFrame(0); present();
+  if (!await sleep(220, token)) return false;
+  // scroll down one dot every two frames until the logo sits at line 64
+  for (let y = -16; y <= 64; y++) {
+    drawBoot(bm, y);
+    if (!await sleep(1000 / 30, token)) return false;
+  }
+  chime();
+  return await sleep(1050, token);
+}
+async function powerOn() {
+  if (power || !cart) return;
+  ensureAudio();
+  power = true; unit.classList.add('on');
+  const token = booting = { live: true };
+  const ok = await bootSequence(token);
+  if (!ok || !token.live) return;
+  booting = null;
+  await Emu.start(cart);
+}
+async function powerOff() {
+  if (!power) return;
+  power = false; unit.classList.remove('on');
+  if (booting) { booting.live = false; booting = null; }
+  await Emu.saveBattery();
+  Emu.stop();
+  if (cart) await db.del('snap.' + cart.id);   // off really is off: next start is a fresh boot
+  lcdOn = false; present();
+}
+
+/* ---------- emulator (binjgb, MIT) ---------- */
+const CPU_HZ = 4194304, AUDIO_FRAMES = 4096, AUDIO_LATENCY = 0.1, MAX_STEP = 5 / 60;
+const EV_FRAME = 1, EV_AUDIO = 2, EV_UNTIL = 4;
+const modP = Binjgb();
+const Emu = {
+  m: null, e: 0, romPtr: 0, joyPtr: 0, raf: 0, last: 0, left: 0, audioAt: 0, ramDirty: false, cart: null, fb: null, ab: null,
+  rgba(c) { return (0xff << 24 | c[2] << 16 | c[1] << 8 | c[0]) >>> 0; },
+  async start(c) {
+    const m = this.m = await modP;
+    this.stop();
+    const size = (c.rom.byteLength + 0x7fff) & ~0x7fff;
+    this.romPtr = m._malloc(size);
+    new Uint8Array(m.HEAP8.buffer, this.romPtr, size).fill(0).set(new Uint8Array(c.rom));
+    this.e = m._emulator_new_simple(this.romPtr, size, ensureAudio().sampleRate, AUDIO_FRAMES, 2);
+    if (!this.e) { toast('That cartridge would not start'); return; }
+    this.cart = c;
+    this.joyPtr = m._joypad_new();
+    m._emulator_set_default_joypad_callback(this.e, this.joyPtr);
+    for (let t = 0; t < 3; t++) m._emulator_set_bw_palette_simple(this.e, t, ...PAL.map(this.rgba));
+    const ram = await db.get('ram.' + c.id);
+    if (ram) this.withFile(m._ext_ram_file_data_new(this.e), (p, b) => { if (b.byteLength === ram.byteLength) { b.set(new Uint8Array(ram)); m._emulator_read_ext_ram(this.e, p); } });
+    const snap = await db.get('snap.' + c.id);
+    if (snap) this.withFile(m._state_file_data_new(this.e), (p, b) => { if (b.byteLength === snap.byteLength) { b.set(new Uint8Array(snap)); m._emulator_read_state(this.e, p); } });
+    if (!power) { this.stop(); return; }
+    this.fb = new Uint8Array(m.HEAP8.buffer, m._get_frame_buffer_ptr(this.e), m._get_frame_buffer_size(this.e));
+    this.ab = new Uint8Array(m.HEAP8.buffer, m._get_audio_buffer_ptr(this.e), m._get_audio_buffer_capacity(this.e));
+    applyButtons();
+    this.last = 0; this.left = 0; this.audioAt = 0;
+    this.raf = requestAnimationFrame(t => this.tick(t));
+  },
+  stop() {
+    if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0;
+    if (this.e && this.m) {
+      this.m._emulator_delete(this.e); this.m._free(this.romPtr);
+      if (this.joyPtr) this.m._joypad_delete(this.joyPtr);
+    }
+    this.e = 0; this.romPtr = 0; this.joyPtr = 0; this.fb = this.ab = null;
+  },
+  withFile(ptr, cb) {
+    const m = this.m, b = new Uint8Array(m.HEAP8.buffer, m._get_file_data_ptr(ptr), m._get_file_data_size(ptr));
+    const r = cb(ptr, b); m._file_data_delete(ptr); return r;
+  },
+  get running() { return !!this.raf; },
+  tick(ms) {
+    this.raf = requestAnimationFrame(t => this.tick(t));
+    const m = this.m, e = this.e, s = ms / 1000;
+    if (this.fb.buffer !== m.HEAP8.buffer) {   // wasm memory grew: refresh the views
+      this.fb = new Uint8Array(m.HEAP8.buffer, m._get_frame_buffer_ptr(e), m._get_frame_buffer_size(e));
+      this.ab = new Uint8Array(m.HEAP8.buffer, m._get_audio_buffer_ptr(e), m._get_audio_buffer_capacity(e));
+    }
+    const dt = Math.max(0, s - (this.last || s)); this.last = s;
+    const until = m._emulator_get_ticks_f64(e) + Math.min(dt, MAX_STEP) * CPU_HZ - this.left;
+    for (;;) {
+      const ev = m._emulator_run_until_f64(e, until);
+      if (ev & EV_FRAME) frame.data.set(this.fb);
+      if (ev & EV_AUDIO) this.pushAudio();
+      if (ev & EV_UNTIL) break;
+    }
+    this.left = (m._emulator_get_ticks_f64(e) - until) | 0;
+    if (m._emulator_was_ext_ram_updated(e)) this.ramDirty = true;
+    present();
+  },
+  pushAudio() {
+    const a = actx; if (!a || a.state !== 'running') return;
+    const now = a.currentTime;
+    if (this.audioAt < now) this.audioAt = now + AUDIO_LATENCY;
+    const buf = a.createBuffer(2, AUDIO_FRAMES, a.sampleRate), L = buf.getChannelData(0), R = buf.getChannelData(1), src = this.ab;
+    for (let i = 0; i < AUDIO_FRAMES; i++) { L[i] = src[2 * i] * 0.5 / 255; R[i] = src[2 * i + 1] * 0.5 / 255; }
+    const n = a.createBufferSource(); n.buffer = buf; n.connect(master); n.start(this.audioAt);
+    this.audioAt += AUDIO_FRAMES / a.sampleRate;
+  },
+  pause() { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } },
+  resume() { if (this.e && !this.raf && power) { this.last = 0; this.left = 0; this.audioAt = 0; this.raf = requestAnimationFrame(t => this.tick(t)); } },
+  async saveBattery() {
+    if (!this.e || !this.cart) return;
+    const ram = this.withFile(this.m._ext_ram_file_data_new(this.e), (p, b) => { this.m._emulator_write_ext_ram(this.e, p); return b.slice().buffer; });
+    if (ram.byteLength) await db.set('ram.' + this.cart.id, ram);
+    this.ramDirty = false;
+  },
+  async snapshot() {
+    if (!this.e || !this.cart) return;
+    const st = this.withFile(this.m._state_file_data_new(this.e), (p, b) => { this.m._emulator_write_state(this.e, p); return b.slice().buffer; });
+    await db.set('snap.' + this.cart.id, st);
+  }
+};
+setInterval(() => { if (Emu.ramDirty) Emu.saveBattery(); }, 1500);
+// Leaving the app keeps your place: the game is frozen and saved, and picks up after the next start-up.
+async function suspend() { if (Emu.e) { Emu.pause(); await Emu.saveBattery(); await Emu.snapshot(); } }
+document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); else Emu.resume(); });
+window.addEventListener('pagehide', suspend);
+
+/* ---------- buttons ---------- */
+const BTN = ['up', 'down', 'left', 'right', 'A', 'B', 'select', 'start'];
+const touches = new Map();   // pointerId -> { zone, set:Set, ax, ay }
+const keysDown = new Set();
+function applyButtons() {
+  const on = new Set(keysDown);
+  for (const t of touches.values()) t.set.forEach(b => on.add(b));
+  if (Emu.e) for (const b of BTN) Emu.m['_set_joyp_' + b](Emu.e, on.has(b) ? 1 : 0);
+  // pressed looks
+  $('#btnA').classList.toggle('on', on.has('A')); $('#btnB').classList.toggle('on', on.has('B'));
+  $('#btnSel').classList.toggle('on', on.has('select')); $('#btnSta').classList.toggle('on', on.has('start'));
+  const tx = (on.has('right') ? 1 : 0) - (on.has('left') ? 1 : 0), ty = (on.has('down') ? 1 : 0) - (on.has('up') ? 1 : 0);
+  $('#dpad').style.transform = `perspective(400px) rotateY(${tx * 7}deg) rotateX(${-ty * 7}deg)`;
+  const hl = $('#hl'); let h = '';
+  if (on.has('up')) h += '<rect x="36" y="3" width="28" height="33" rx="3"/>';
+  if (on.has('down')) h += '<rect x="36" y="64" width="28" height="33" rx="3"/>';
+  if (on.has('left')) h += '<rect x="3" y="36" width="33" height="28" rx="3"/>';
+  if (on.has('right')) h += '<rect x="64" y="36" width="33" height="28" rx="3"/>';
+  hl.innerHTML = h;
+}
+const hapticSw = document.createElement('label');
+hapticSw.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;overflow:hidden;opacity:0';
+hapticSw.innerHTML = '<input type="checkbox" switch tabindex="-1" aria-hidden="true">';
+document.body.appendChild(hapticSw);
+const canVibrate = typeof navigator.vibrate === 'function';
+function haptic(lifting) {
+  if (canVibrate) { if (!lifting) try { navigator.vibrate(8); } catch (e) {} return; }
+  if (lifting) try { hapticSw.click(); } catch (e) {}
+}
+
+/* ---------- layout: draw the parts and keep their hit areas in one place ---------- */
+const controls = $('#controls');
+const L = {};
+function place(id, cx, cy, w, h, rot) {
+  const el = $('#' + id);
+  el.style.left = (cx - w / 2) + 'px'; el.style.top = (cy - h / 2) + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px';
+  if (rot != null) el.style.setProperty('--rot', rot + 'deg');
+}
+function layout() {
+  const W = controls.clientWidth, H = controls.clientHeight;
+  const u = Math.min(W / 380, H / 360);           // 1 at a typical phone
+  // d-pad and A/B share the upper ~70%; start/select and the speaker sit in the bottom band
+  const top = H * 0.37;
+  L.dpad = { x: W * 0.245, y: top, s: Math.min(W * 0.44, H * 0.54, 200) };
+  place('dpad', L.dpad.x, L.dpad.y, L.dpad.s, L.dpad.s);
+  const D = Math.min(W * 0.215, H * 0.25, 100);
+  const ang = -25 * Math.PI / 180, gap = D * 1.22;
+  const mx = W * 0.765, my = top + D * 0.05;
+  L.b = { x: mx - Math.cos(ang) * gap / 2, y: my - Math.sin(ang) * gap / 2, r: D / 2 };
+  L.a = { x: mx + Math.cos(ang) * gap / 2, y: my + Math.sin(ang) * gap / 2, r: D / 2 };
+  L.ab = { x: mx, y: my, ang };
+  place('btnB', L.b.x, L.b.y, D, D); place('btnA', L.a.x, L.a.y, D, D);
+  place('abwell', mx, my, gap + D * 1.12, D * 1.12, -25);
+  place('lblB', L.b.x, L.b.y + D * 0.5 + 16 * u, 30, 16); place('lblA', L.a.x, L.a.y + D * 0.5 + 16 * u, 30, 16);
+  // select/start: nudged lower and a little apart so they never sit under a thumb working the pad or A/B
+  const sy = H * 0.84, pw = Math.min(56, W * 0.15), ph = Math.max(12, pw * 0.25);
+  L.sel = { x: W * 0.36, y: sy }; L.sta = { x: W * 0.58, y: sy };
+  place('btnSel', L.sel.x, L.sel.y, pw, ph, -25); place('btnSta', L.sta.x, L.sta.y, pw, ph, -25);
+  place('lblSel', L.sel.x - 4, L.sel.y + ph + 11, 70, 12); place('lblSta', L.sta.x - 4, L.sta.y + ph + 11, 70, 12);
+  L.pw = pw;
+  // speaker grille: smaller than the original, bottom-right, doubles as the sound switch
+  const ss = Math.min(66, W * 0.17);
+  L.spk = { x: W - ss * 0.62 - 6, y: H - ss * 0.62 - 4, s: ss };
+  place('speaker', L.spk.x, L.spk.y, ss, ss);
+  // six slanted slots side by side, longest in the middle, like the original grille
+  const gr = $('#grill'); gr.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const n = document.createElement('i'); n.className = 'slot';
+    const len = ss * (0.6 + 0.4 * Math.sin(Math.PI * (i + 0.5) / 6)), sw = ss * 0.08;
+    n.style.width = sw + 'px'; n.style.height = len + 'px';
+    n.style.left = (ss / 2 - sw / 2 + (i - 2.5) * ss * 0.15) + 'px'; n.style.top = (ss / 2 - len / 2) + 'px';
+    gr.appendChild(n);
+  }
+}
+const ro = new ResizeObserver(() => { layout(); sizeLcd(); });
+ro.observe(controls); ro.observe($('#lcd'));
+
+/* which zone a new touch belongs to, and what it presses */
+function zoneAt(x, y) {
+  const near = (p, rx, ry) => Math.abs(x - p.x) < rx && Math.abs(y - p.y) < ry;
+  if (Math.hypot(x - L.spk.x, y - L.spk.y) < L.spk.s * 0.6) return 'spk';
+  if (near(L.sel, L.pw * 0.85, 30)) return 'select';
+  if (near(L.sta, L.pw * 0.85, 30)) return 'start';
+  if (y > L.sel.y - 24 && x > L.sel.x - L.pw && x < L.sta.x + L.pw) return null;
+  return x < controls.clientWidth * 0.5 ? 'dpad' : 'ab';
+}
+// d-pad: direction is the angle from an anchor that starts at the pad's center and follows the thumb
+// on a short leash, so a drifting thumb keeps steering and a small reverse flick changes direction.
+function dpadDirs(t, x, y) {
+  const s = L.dpad.s, lim = s * 0.3, dead = s * 0.07;
+  let dx = x - t.ax, dy = y - t.ay; const d = Math.hypot(dx, dy);
+  if (d > lim) { t.ax += dx * (1 - lim / d); t.ay += dy * (1 - lim / d); dx = x - t.ax; dy = y - t.ay; }
+  const set = new Set();
+  if (Math.hypot(dx, dy) < dead) return set;
+  const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  // eight ways: cardinals 50 degrees each, diagonals 40, so straight lines are easy to hold
+  const sec = [[0, ['right']], [45, ['right', 'down']], [90, ['down']], [135, ['down', 'left']], [180, ['left']], [225, ['left', 'up']], [270, ['up']], [315, ['up', 'right']]];
+  for (const [c, b] of sec) { const half = (c % 90) ? 20 : 25; if (Math.abs(((deg - c + 540) % 360) - 180) <= half) { b.forEach(v => set.add(v)); break; } }
+  return set;
+}
+// A/B: the nearer button, or both when the thumb lands on the seam between them
+function abDirs(x, y) {
+  const a = Math.hypot(x - L.a.x, y - L.a.y), b = Math.hypot(x - L.b.x, y - L.b.y), seam = L.a.r * 0.32;
+  const set = new Set();
+  if (Math.abs(a - b) < seam && Math.max(a, b) < L.a.r * 2.1) { set.add('A'); set.add('B'); }
+  else set.add(a < b ? 'A' : 'B');
+  return set;
+}
+function local(e) { const r = controls.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+controls.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  ensureAudio();
+  const [x, y] = local(e), zone = zoneAt(x, y);
+  if (!zone) return;
+  if (zone === 'spk') { setSound(!soundOn); haptic(); return; }
+  try { controls.setPointerCapture(e.pointerId); } catch (_) {}
+  const t = { zone, set: new Set(), ax: L.dpad.x, ay: L.dpad.y };
+  if (zone === 'dpad') {
+    // a touch that lands well off the cross anchors at the pad's center, one on it steers from the center too
+    t.set = dpadDirs(t, x, y);
+  } else if (zone === 'ab') t.set = abDirs(x, y);
+  else t.set = new Set([zone]);
+  touches.set(e.pointerId, t);
+  haptic();
+  applyButtons();
+});
+controls.addEventListener('pointermove', e => {
+  const t = touches.get(e.pointerId); if (!t) return;
+  const [x, y] = local(e);
+  const before = [...t.set].join();
+  if (t.zone === 'dpad') t.set = dpadDirs(t, x, y);
+  else if (t.zone === 'ab') t.set = abDirs(x, y);
+  if ([...t.set].join() !== before) applyButtons();
+});
+const lift = e => { if (touches.delete(e.pointerId)) { haptic(true); applyButtons(); } };
+controls.addEventListener('pointerup', lift);
+controls.addEventListener('pointercancel', lift);
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
+/* keyboard, for testing on a computer: arrows, Z = B, X = A, Enter = Start, Shift = Select */
+const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyX: 'A', KeyZ: 'B', Enter: 'start', ShiftRight: 'select', ShiftLeft: 'select', Backspace: 'select' };
+window.addEventListener('keydown', e => { const b = KEYMAP[e.code]; if (b) { e.preventDefault(); ensureAudio(); keysDown.add(b); applyButtons(); } });
+window.addEventListener('keyup', e => { const b = KEYMAP[e.code]; if (b) { e.preventDefault(); keysDown.delete(b); applyButtons(); } });
+
+/* ---------- top edge ---------- */
+$('#power').addEventListener('click', () => { haptic(true); power ? powerOff() : powerOn(); });
+$('#cart').addEventListener('click', () => { haptic(true); $('#file').click(); });
+
+/* ---------- start ---------- */
+setSound(soundOn); $('#speaker').classList.remove('flash');
+layout(); sizeLcd();
+loadInitialCart().catch(() => toast('No cartridge yet: tap the slot top-right', 3000));
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
